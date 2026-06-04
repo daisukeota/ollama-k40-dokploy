@@ -1,0 +1,21 @@
+services:
+  ollama_k40:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    runtime: nvidia
+    container_name: ollama_k40_dokploy
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  ollama_data:
