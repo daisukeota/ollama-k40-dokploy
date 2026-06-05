@@ -1,23 +1,30 @@
 # ==========================================
 # 1. ベースイメージの指定
 # ==========================================
-# サーバーのNVIDIAドライバー（470.256.02）に最も適合するCUDA 11.4の開発用イメージを使用します
 FROM nvidia/cuda:11.4.3-devel-ubuntu20.04
 
-# 環境変数の設定（ビルド時のタイムゾーン選択などのプロンプト停止を防ぎます）
 ENV DEBIAN_FRONTEND=noninteractive
 
 # ==========================================
 # 2. 必要な依存パッケージと最新のGo言語の導入
 # ==========================================
+# ※ 後ほど公式スクリプトで最新の CMake を入れるため、ここでは cmake を除外しています
 RUN apt-get update && apt-get install -y \
     curl \
     git \
     software-properties-common \
-    cmake \
     && add-apt-repository ppa:longsleep/golang-backports -y \
     && apt-get update && apt-get install -y golang-go \
     && rm -rf /var/lib/apt/lists/*
+
+# ==========================================
+# 2.5. 最新の CMake を公式スクリプトからインストール（★ここを追加）
+# ==========================================
+# Ubuntu標準の3.16を回避し、条件である3.18以上（今回は安定版の3.26系列）を直接導入します
+RUN curl -sSL https://cmake.org/files/v3.26/cmake-3.26.4-linux-x86_64.sh -o /tmp/cmake.sh && \
+    chmod +x /tmp/cmake.sh && \
+    /tmp/cmake.sh --prefix=/usr/local --skip-license && \
+    rm /tmp/cmake.sh
 
 # ==========================================
 # 3. Ollamaのソース取得とチェックアウト
@@ -29,7 +36,6 @@ RUN git clone https://github.com/ollama/ollama.git && \
 # ==========================================
 # 4. パッチの適用とgpu.goの書き換え（Tesla K40: CC 3.5対応化）
 # ==========================================
-# エラーの原因になりやすい「継続行（\）の間のコメント」を排除しました
 RUN cd ollama && \
     curl -OL https://patch-diff.githubusercontent.com/raw/ollama/ollama/pull/2233.patch && \
     git apply 2233.patch && \
@@ -41,7 +47,6 @@ RUN cd ollama && \
 # ==========================================
 # 5. 環境変数の注入と生成・ビルドの実行
 # ==========================================
-# コンパイルターゲットにTesla K40のアーキテクチャ「35」を明示指定します
 ENV CMAKE_CUDA_ARCHITECTURES="35"
 ENV OLLAMA_CUSTOM_CUDA_ARCH="35"
 
