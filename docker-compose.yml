@@ -10,7 +10,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     environment:
-      - CUDA_VISIBLE_DEVICES=0
+      - OLLAMA_DEBUG=1 
     deploy:
       resources:
         reservations:
